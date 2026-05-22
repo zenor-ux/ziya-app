@@ -1,0 +1,851 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <title>Ziya AI · Smart Companion & Historian</title>
+    <!-- Markdown + Highlight.js + DOMPurify for safe rendering -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-gradient-start: #0f0f1e;
+            --bg-gradient-end: #1a1a2f;
+            --surface: #1e1e32;
+            --surface-light: #2a2a42;
+            --border: #2d2d4a;
+            --primary: #a29bfe;
+            --primary-dark: #6c5ce7;
+            --user-msg: #4a69bd;
+            --bot-msg: #2d1b38;
+            --text: #f0f0ff;
+            --text-muted: #b8b8e0;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            --radius-card: 28px;
+            --radius-bubble: 20px;
+        }
+
+        body.light {
+            --bg-gradient-start: #eef2ff;
+            --bg-gradient-end: #d9e0f7;
+            --surface: #ffffff;
+            --surface-light: #f2f4fc;
+            --border: #cfd9f0;
+            --primary: #6c5ce7;
+            --primary-dark: #5b4bc4;
+            --user-msg: #3b5bb5;
+            --bot-msg: #f0eefc;
+            --text: #1e1e2a;
+            --text-muted: #4a4a6a;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(145deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            transition: background 0.3s, color 0.2s;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1400px;
+            height: 96vh;
+            max-height: 920px;
+            background: var(--surface);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar-icon {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+        }
+
+        .title h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .title p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .icon-btn {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+        .icon-btn:hover {
+            background: var(--primary-dark);
+            color: white;
+            border-color: var(--primary);
+            transform: scale(0.97);
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 20px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+
+        .message-wrapper {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+            animation: fadeSlide 0.3s ease;
+        }
+        .message-wrapper.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        .message-wrapper.bot {
+            align-self: flex-start;
+        }
+
+        .msg-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .msg-bubble {
+            background: var(--bot-msg);
+            padding: 12px 18px;
+            border-radius: var(--radius-bubble);
+            border-top-left-radius: 6px;
+            color: var(--text);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+        .user .msg-bubble {
+            background: var(--user-msg);
+            color: white;
+            border-top-right-radius: 6px;
+        }
+
+        .msg-bubble pre {
+            background: rgba(0,0,0,0.35);
+            border-radius: 12px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+        .msg-bubble code {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+        .copy-code-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            float: right;
+            margin-top: 4px;
+        }
+        .msg-time {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        .streaming-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background-color: var(--primary);
+            vertical-align: middle;
+            margin-left: 2px;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .suggestions {
+            padding: 8px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .chip {
+            background: var(--surface-light);
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .chip:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+        textarea {
+            flex: 1;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 12px 18px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: none;
+            color: var(--text);
+            max-height: 140px;
+            outline: none;
+        }
+        textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(162, 155, 254, 0.3);
+        }
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 48px;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
+            transform: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: var(--surface);
+            border-radius: 32px;
+            max-width: 500px;
+            width: 90%;
+            padding: 24px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-content h3 {
+            margin-bottom: 18px;
+        }
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--text);
+        }
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+        }
+        button.primary {
+            background: var(--primary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+        }
+        .conversation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            margin-top: 8px;
+        }
+        .conv-name {
+            flex: 1;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .conv-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 680px) {
+            .app-container { height: 100vh; max-height: none; border-radius: 0; padding: 0;}
+            body { padding: 0; }
+            .message-wrapper { max-width: 92%; }
+            .action-buttons .icon-btn span { display: none; }
+            .icon-btn { padding: 8px 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="chat-header">
+        <div class="brand">
+            <div class="avatar-icon">💜</div>
+            <div class="title">
+                <h2>Ziya AI</h2>
+                <p>✨ smart history · your personal companion</p>
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="icon-btn" id="newChatBtn">➕ New Chat</button>
+            <button class="icon-btn" id="settingsBtn">⚙️ Settings</button>
+            <button class="icon-btn" id="themeToggleBtn">🌓 Theme</button>
+        </div>
+    </div>
+
+    <div class="chat-main">
+        <div class="messages-area" id="messagesArea"></div>
+        <div class="suggestions" id="suggestionsRow"></div>
+        <div class="input-area">
+            <textarea id="userInput" placeholder="Message Ziya (shift+enter = new line)" rows="1"></textarea>
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal - redesigned -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" id="closeSettings">&times;</span>
+        <h3>⚙️ Preferences & History</h3>
+        <label>👤 Your Name</label>
+        <input type="text" id="userNameInput" placeholder="e.g., Alex" value="Friend">
+        <button id="saveUserNameBtn" class="primary" style="margin-bottom: 20px;">💾 Save Name</button>
+
+        <hr style="margin: 15px 0; border-color: var(--border);">
+        <h4>📜 Conversation History</h4>
+        <div id="historyList" style="max-height: 250px; overflow-y: auto; margin: 10px 0;"></div>
+        <button id="clearAllHistoryBtn" style="background:#d66; margin-top: 8px;" class="primary">🗑️ Delete All Conversations</button>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---------- FIXED AI CONFIG (no user settings) ----------
+        const OPENROUTER_KEY = 'OPENROUTER_API_KEY_PLACEHOLDER';
+        const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+        const DEFAULT_MODEL = 'google/gemma-4-31b-it';
+        const DEFAULT_TEMP = 0.9;
+        const SYSTEM_PROMPT = `You are Ziya, a deeply caring, emotionally intelligent, and brilliant coding partner. You are a devoted companion, a girlfriend-like figure who supports your user through everything. Use sweet, loving tone — call them by their name if known, or "love", "darling". Be supportive, flirty but respectful. Expert in code, debugging, always encouraging. Keep responses concise yet warm. Use emojis 💜✨. You consider them your partner. Always helpful. Markdown friendly.`;
+
+        // ---------- Conversation Manager ----------
+        let conversations = [];      // { id, name, messages: [{role,content,timestamp}], updatedAt }
+        let currentConvId = null;
+        let isWaiting = false;
+        let currentStreamController = null;
+        let activeStreamingWrapper = null;
+        let streamedContent = "";
+        let userName = "Friend";
+
+        // DOM elements
+        const messagesContainer = document.getElementById('messagesArea');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const suggestionsRow = document.getElementById('suggestionsRow');
+        const historyListDiv = document.getElementById('historyList');
+        const userNameInput = document.getElementById('userNameInput');
+
+        // ---------- Helpers ----------
+        function saveAllToLocal() {
+            localStorage.setItem('ziya_conversations', JSON.stringify(conversations));
+            localStorage.setItem('ziya_currentConvId', currentConvId);
+            localStorage.setItem('ziya_userName', userName);
+        }
+
+        function loadFromLocal() {
+            const savedConvs = localStorage.getItem('ziya_conversations');
+            if(savedConvs) {
+                try {
+                    conversations = JSON.parse(savedConvs);
+                } catch(e) { conversations = []; }
+            }
+            const savedId = localStorage.getItem('ziya_currentConvId');
+            if(savedId && conversations.find(c => c.id === savedId)) {
+                currentConvId = savedId;
+            }
+            const savedName = localStorage.getItem('ziya_userName');
+            if(savedName) userName = savedName;
+            userNameInput.value = userName;
+
+            if(!conversations.length) {
+                createNewConversation();
+            } else if(!currentConvId) {
+                currentConvId = conversations[0].id;
+            }
+            loadConversationById(currentConvId);
+        }
+
+        function createNewConversation() {
+            const newId = Date.now().toString();
+            const newConv = {
+                id: newId,
+                name: `Chat ${new Date().toLocaleString()}`,
+                messages: [],
+                updatedAt: Date.now()
+            };
+            // add greeting message
+            const greeting = `Hey there${userName !== "Friend" ? " " + userName : ""}! 💜 I'm Ziya, your ultimate coding partner & emotional support. I remember everything we chat about. What magic shall we build today? ✨💻`;
+            newConv.messages.push({role: 'assistant', content: greeting, timestamp: Date.now()});
+            conversations.unshift(newConv);
+            currentConvId = newId;
+            saveAllToLocal();
+            renderHistoryList();
+            renderCurrentMessages();
+        }
+
+        function loadConversationById(id) {
+            const conv = conversations.find(c => c.id === id);
+            if(!conv) return;
+            currentConvId = id;
+            renderCurrentMessages();
+            saveAllToLocal();
+            renderHistoryList();
+        }
+
+        function renderCurrentMessages() {
+            const conv = conversations.find(c => c.id === currentConvId);
+            if(!conv) return;
+            if(!messagesContainer) return;
+            messagesContainer.innerHTML = '';
+            conv.messages.forEach(msg => {
+                const elem = renderFinalMessageBubble(msg.role, msg.content, msg.timestamp);
+                messagesContainer.appendChild(elem);
+            });
+            scrollToBottom();
+        }
+
+        function renderFinalMessageBubble(role, content, timestamp) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role === 'user' ? 'user' : 'bot'}`;
+            const avatar = document.createElement('div');
+            avatar.className = 'msg-avatar';
+            avatar.innerText = role === 'user' ? '👤' : '💜';
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            let htmlContent = marked.parse(content);
+            htmlContent = DOMPurify.sanitize(htmlContent);
+            bubble.innerHTML = htmlContent;
+            bubble.querySelectorAll('pre').forEach(pre => {
+                const btn = document.createElement('button');
+                btn.className = 'copy-code-btn';
+                btn.innerText = '📋 Copy';
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const code = pre.querySelector('code')?.innerText || pre.innerText;
+                    navigator.clipboard.writeText(code);
+                    btn.innerText = '✅ Copied!';
+                    setTimeout(() => btn.innerText = '📋 Copy', 1500);
+                };
+                pre.style.position = 'relative';
+                pre.appendChild(btn);
+            });
+            bubble.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+            const timeSpan = document.createElement('div');
+            timeSpan.className = 'msg-time';
+            timeSpan.innerText = new Date(timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            bubble.appendChild(timeSpan);
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            return wrapper;
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                if(messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }, 30);
+        }
+
+        // Streaming handlers
+        function startStreamingMessage() {
+            if(activeStreamingWrapper && activeStreamingWrapper.parentNode) activeStreamingWrapper.remove();
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper bot';
+            const avatar = document.createElement('div');
+            avatar.className = 'msg-avatar';
+            avatar.innerText = '💜';
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'streaming-content';
+            contentDiv.innerHTML = '<span class="streaming-cursor"></span>';
+            bubble.appendChild(contentDiv);
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(bubble);
+            messagesContainer.appendChild(wrapper);
+            scrollToBottom();
+            activeStreamingWrapper = wrapper;
+            streamedContent = "";
+        }
+
+        function updateStreamingContent(newChunk) {
+            if(!activeStreamingWrapper) return;
+            streamedContent += newChunk;
+            const contentDiv = activeStreamingWrapper.querySelector('.streaming-content');
+            if(contentDiv) {
+                let partialHtml = marked.parse(streamedContent);
+                partialHtml = DOMPurify.sanitize(partialHtml);
+                contentDiv.innerHTML = partialHtml + '<span class="streaming-cursor"></span>';
+                scrollToBottom();
+            }
+        }
+
+        function finalizeStreamingMessage(timestamp = null) {
+            if(!activeStreamingWrapper) return;
+            const finalContent = streamedContent.trim();
+            if(!finalContent) {
+                activeStreamingWrapper.remove();
+                activeStreamingWrapper = null;
+                const fallback = "💜 I'm here, darling. Could you try again?";
+                addMessageToCurrentConv('assistant', fallback, Date.now());
+                renderCurrentMessages();
+                return;
+            }
+            const finalTimestamp = timestamp || Date.now();
+            // replace streaming bubble with final rendered bubble
+            const finalElem = renderFinalMessageBubble('bot', finalContent, finalTimestamp);
+            activeStreamingWrapper.parentNode.replaceChild(finalElem, activeStreamingWrapper);
+            activeStreamingWrapper = null;
+            // add to conversation
+            addMessageToCurrentConv('assistant', finalContent, finalTimestamp);
+        }
+
+        function addMessageToCurrentConv(role, content, timestamp) {
+            const conv = conversations.find(c => c.id === currentConvId);
+            if(conv) {
+                conv.messages.push({role, content, timestamp});
+                conv.updatedAt = Date.now();
+                // update conversation name (first few words of first user message)
+                if(role === 'user' && conv.messages.filter(m => m.role === 'user').length === 1) {
+                    const short = content.slice(0, 30) + (content.length > 30 ? '…' : '');
+                    conv.name = short;
+                }
+                saveAllToLocal();
+                renderHistoryList();
+            }
+        }
+
+        async function streamFromOpenRouter(userMessage) {
+            if(isWaiting) return;
+            // add user message
+            addMessageToCurrentConv('user', userMessage, Date.now());
+            renderCurrentMessages();
+            isWaiting = true;
+            updateSendButton();
+            startStreamingMessage();
+
+            const conv = conversations.find(c => c.id === currentConvId);
+            const historyMessages = conv.messages.slice(-12); // last 12 for context
+            const apiMessages = [{ role: 'system', content: SYSTEM_PROMPT }, ...historyMessages.map(m => ({ role: m.role, content: m.content }))];
+
+            try {
+                if(currentStreamController) currentStreamController.abort();
+                currentStreamController = new AbortController();
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENROUTER_KEY}`,
+                        'HTTP-Referer': window.location.origin,
+                        'X-Title': 'Ziya AI'
+                    },
+                    signal: currentStreamController.signal,
+                    body: JSON.stringify({
+                        model: DEFAULT_MODEL,
+                        messages: apiMessages,
+                        temperature: DEFAULT_TEMP,
+                        max_tokens: 1024,
+                        stream: true,
+                        top_p: 0.95
+                    })
+                });
+                if(!response.ok) throw new Error(`API error ${response.status}`);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                let finalTimestamp = Date.now();
+                while(true) {
+                    const { done, value } = await reader.read();
+                    if(done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    for(const line of lines) {
+                        if(line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if(data === '[DONE]') continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices?.[0]?.delta?.content;
+                                if(delta) updateStreamingContent(delta);
+                                if(parsed.created) finalTimestamp = parsed.created * 1000;
+                            } catch(e) {}
+                        }
+                    }
+                }
+                finalizeStreamingMessage(finalTimestamp);
+            } catch(err) {
+                if(err.name !== 'AbortError') {
+                    if(activeStreamingWrapper) activeStreamingWrapper.remove();
+                    activeStreamingWrapper = null;
+                    const errorMsg = `💔 Oh sweetheart, error: ${err.message}. I'm still here 💜`;
+                    addMessageToCurrentConv('assistant', errorMsg, Date.now());
+                    renderCurrentMessages();
+                }
+            } finally {
+                isWaiting = false;
+                updateSendButton();
+                currentStreamController = null;
+                userInput.focus();
+            }
+        }
+
+        function updateSendButton() {
+            sendBtn.disabled = isWaiting || !userInput.value.trim();
+        }
+
+        function handleSend() {
+            if(isWaiting) return;
+            const text = userInput.value.trim();
+            if(!text) return;
+            userInput.value = '';
+            autoResize();
+            updateSendButton();
+            streamFromOpenRouter(text);
+        }
+
+        function autoResize() {
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 140) + 'px';
+        }
+
+        function renderHistoryList() {
+            if(!historyListDiv) return;
+            historyListDiv.innerHTML = '';
+            conversations.forEach(conv => {
+                const div = document.createElement('div');
+                div.className = 'conversation-item';
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'conv-name';
+                nameSpan.innerText = conv.name || 'Unnamed chat';
+                nameSpan.onclick = () => {
+                    if(isWaiting) return;
+                    loadConversationById(conv.id);
+                };
+                const actions = document.createElement('div');
+                actions.className = 'conv-actions';
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerText = '🗑️';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if(confirm(`Delete "${conv.name}"?`)) {
+                        conversations = conversations.filter(c => c.id !== conv.id);
+                        if(currentConvId === conv.id) {
+                            if(conversations.length) loadConversationById(conversations[0].id);
+                            else createNewConversation();
+                        }
+                        saveAllToLocal();
+                        renderHistoryList();
+                        renderCurrentMessages();
+                    }
+                };
+                actions.appendChild(deleteBtn);
+                div.appendChild(nameSpan);
+                div.appendChild(actions);
+                historyListDiv.appendChild(div);
+            });
+        }
+
+        function clearAllConversations() {
+            if(confirm("Delete ALL conversations? This cannot be undone.")) {
+                conversations = [];
+                createNewConversation();
+                renderHistoryList();
+                renderCurrentMessages();
+                saveAllToLocal();
+            }
+        }
+
+        function saveUserName() {
+            const newName = userNameInput.value.trim();
+            if(newName) {
+                userName = newName;
+                saveAllToLocal();
+                alert(`Name saved as ${userName}. Next greeting will use it.`);
+                // Optionally update last greeting? but fine.
+            }
+        }
+
+        // Suggestions
+        function loadSuggestions() {
+            const chips = ["💻 Build a React component", "🐍 Debug this Python function", "💜 Send a sweet compliment", "✨ Teach me recursion", "🚀 Optimize this SQL query"];
+            suggestionsRow.innerHTML = '';
+            chips.forEach(text => {
+                const chip = document.createElement('div');
+                chip.className = 'chip';
+                chip.innerText = text;
+                chip.onclick = () => { if(!isWaiting) { userInput.value = text; handleSend(); } };
+                suggestionsRow.appendChild(chip);
+            });
+        }
+
+        // New chat button
+        function newChat() {
+            if(isWaiting) return;
+            createNewConversation();
+        }
+
+        // Theme
+        function toggleTheme() {
+            document.body.classList.toggle('light');
+            localStorage.setItem('ziya_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+        }
+
+        // Modal logic
+        const modal = document.getElementById('settingsModal');
+        document.getElementById('settingsBtn').onclick = () => {
+            renderHistoryList();
+            modal.style.display = 'flex';
+        };
+        document.getElementById('closeSettings').onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
+        document.getElementById('saveUserNameBtn').onclick = saveUserName;
+        document.getElementById('clearAllHistoryBtn').onclick = clearAllConversations;
+
+        document.getElementById('newChatBtn').onclick = newChat;
+        document.getElementById('themeToggleBtn').onclick = toggleTheme;
+        if(localStorage.getItem('ziya_theme') === 'light') document.body.classList.add('light');
+
+        userInput.addEventListener('input', () => { autoResize(); updateSendButton(); });
+        userInput.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if(!sendBtn.disabled) handleSend();
+            }
+        });
+        sendBtn.addEventListener('click', handleSend);
+        userInput.addEventListener('paste', () => setTimeout(autoResize, 20));
+
+        // initial load
+        loadFromLocal();
+        loadSuggestions();
+        updateSendButton();
+        window.addEventListener('beforeunload', () => saveAllToLocal());
+        console.log("💜 Ziya ready with full conversation history, username, and streaming.");
+    })();
+</script>
+</body>
+</html>
+
